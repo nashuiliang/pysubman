@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-__version__ = "1.10.5"
+__version__ = "1.10.6"
 
 import beanstalkd
 import json
