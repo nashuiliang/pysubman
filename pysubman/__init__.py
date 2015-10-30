@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-__version__ = "1.10.3"
+__version__ = "1.10.5"
 
 import beanstalkd
 import json
@@ -112,7 +112,7 @@ class Producer(object):
 
     def put(self, obj, *args):
         info = format(obj, *args)
-        self.put_detail(obj.Tube, obj.Topic, JOB_STATUS_UNTREATED, 0, info)
+        return self.put_detail(obj.Tube, obj.Topic, JOB_STATUS_UNTREATED, 0, info)
 
     def put_detail(self, tube, topic, status, retry, info):
         self.connection = beanstalkd.Connection(self.address)
@@ -120,7 +120,7 @@ class Producer(object):
 
         job_detail = encode_job(topic, status, retry, info)
         _logger.debug(job_detail)
-        self.connection.put(job_detail)
+        return self.connection.put(job_detail)
 
     def __del__(self):
         self.connection.close()
