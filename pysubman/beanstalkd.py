@@ -66,8 +66,7 @@ class Connection(object):
                 logging.error('Failed to load PyYAML, will not parse YAML')
                 parse_yaml = False
 
-        address_list = address.split(":")
-        self.host, self.port = address_list[0]
+        self.host, self.port = address.split(":")
         self.port = int(self.port)
 
         self._connect_timeout = connect_timeout
