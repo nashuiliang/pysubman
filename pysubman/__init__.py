@@ -153,11 +153,11 @@ class _Tube(object):
         for tube_name in tubes:
             if tube_name != "default":
                 _logger.info("watch list sum %d in %s" % (
-                    tube_name, self.connection.watch(tube_name)))
+                    self.connection.watch(tube_name), tube_name))
 
         if "default" not in tubes:
             _logger.info("watch list sum %d in %s" % (
-                "default", self.connection.ignore("default")))
+                self.connection.ignore("default"), "default"))
 
     def _release_new_job(self, topic, status, retry, info):
         producer = Producer(self.client.beanstalkd_host)
