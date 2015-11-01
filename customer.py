@@ -21,7 +21,7 @@ def main():
     consumer = pysubman.Consumer(
         address="192.168.0.23:11300",
         services=service,
-        use_threading=True).tube("t-101")
+        use_threading=False).tube("t-101")
     consumer.run()
 
 
