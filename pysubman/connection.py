@@ -1,52 +1,36 @@
 #!/usr/bin/env python
-"""beanstalkc - A beanstalkd Client Library for Python"""
 
 import logging
 import socket
 import sys
+from .constants import CRLF, DEFAULT_PRIORITY, DEFAULT_TTR
 
 
-__license__ = '''
-Copyright (C) 2008-2015 Andreas Bolka
+class BJob(object):
+    def __init__(self, jid, body, reserved):
+        self.jid = jid
+        self.body = body
+        self.reserved = reserved
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-'''
-
-__version__ = '0.4.0'
+    def bury(self, connection, priority=None):
+        if self.reserved:
+            connection.bury(self.jid, priority or DEFAULT_PRIORITY)
+            self.reserved = False
 
 
-DEFAULT_PRIORITY = 2 ** 31
-DEFAULT_TTR = 10 * 60  # 10min
-CRLF = "\r\n"
-
-
-class BeanstalkcException(Exception):
+class UnexpectedResponse(Exception):
     pass
 
 
-class UnexpectedResponse(BeanstalkcException):
+class CommandFailed(Exception):
     pass
 
 
-class CommandFailed(BeanstalkcException):
+class DeadlineSoon(Exception):
     pass
 
 
-class DeadlineSoon(BeanstalkcException):
-    pass
-
-
-class SocketError(BeanstalkcException):
+class SocketError(Exception):
     @staticmethod
     def wrap(wrapped_function, *args, **kwargs):
         try:
@@ -59,6 +43,7 @@ class SocketError(BeanstalkcException):
 class Connection(object):
     def __init__(self, address, parse_yaml=True,
                  connect_timeout=socket.getdefaulttimeout()):
+
         if parse_yaml is True:
             try:
                 parse_yaml = __import__('yaml').load
@@ -90,6 +75,7 @@ class Connection(object):
 
     def close(self):
         """Close connection to server."""
+
         try:
             self._socket.sendall('quit\r\n')
         except socket.error:
@@ -102,12 +88,15 @@ class Connection(object):
 
     def reconnect(self):
         """Re-connect to server."""
+
         self.close()
         self.connect()
 
     def _interact(self, command, expected_ok, expected_err=[]):
         SocketError.wrap(self._socket.sendall, command)
         status, results = self._read_response()
+        import logging
+        logging.warn(("**", command, status, results))
         if status in expected_ok:
             return results
 
@@ -139,7 +128,7 @@ class Connection(object):
     def _interact_job(self, command, expected_ok, expected_err, reserved=True):
         jid, size = self._interact(command, expected_ok, expected_err)
         body = self._read_body(int(size))
-        return Job(self, int(jid), body, reserved)
+        return BJob(int(jid), body, reserved)
 
     def _interact_yaml(self, command, expected_ok, expected_err=[]):
         size, = self._interact(command, expected_ok, expected_err)
@@ -153,8 +142,7 @@ class Connection(object):
             return None
 
     # -- public interface --
-
-    def put(self, body, priority=DEFAULT_PRIORITY, delay=0, ttr=DEFAULT_TTR):
+    def put(self, body, priority=2 ** 31, delay=0, ttr=DEFAULT_TTR):
         """Put a job into the current tube. Returns job id."""
 
         assert isinstance(body, str), 'Job body must be a str instance'
@@ -186,42 +174,52 @@ class Connection(object):
 
     def kick(self, bound=1):
         """Kick at most bound jobs into the ready queue."""
+
         return int(self._interact_value('kick %d\r\n' % bound, ['KICKED']))
 
     def kick_job(self, jid):
         """Kick a specific job into the ready queue."""
+
         self._interact('kick-job %d\r\n' % jid, ['KICKED'], ['NOT_FOUND'])
 
     def peek(self, jid):
         """Peek at a job. Returns a Job, or None."""
+
         return self._interact_peek('peek %d\r\n' % jid)
 
     def peek_ready(self):
         """Peek at next ready job. Returns a Job, or None."""
+
         return self._interact_peek('peek-ready\r\n')
 
     def peek_delayed(self):
         """Peek at next delayed job. Returns a Job, or None."""
+
         return self._interact_peek('peek-delayed\r\n')
 
     def peek_buried(self):
         """Peek at next buried job. Returns a Job, or None."""
+
         return self._interact_peek('peek-buried\r\n')
 
     def tubes(self):
         """Return a list of all existing tubes."""
+
         return self._interact_yaml('list-tubes\r\n', ['OK'])
 
     def using(self):
         """Return the tube currently being used."""
+
         return self._interact_value('list-tube-used\r\n', ['USING'])
 
     def use(self, name):
         """Use a given tube."""
+
         return self._interact_value('use %s\r\n' % name, ['USING'])
 
     def watching(self):
         """Return a list of all tubes being watched."""
+
         return self._interact_yaml('list-tubes-watched\r\n', ['OK'])
 
     def watch(self, name):
@@ -231,6 +229,7 @@ class Connection(object):
 
     def ignore(self, name):
         """Stop watching a given tube."""
+
         try:
             return int(self._interact_value('ignore %s\r\n' % name,
                                             ['WATCHING'],
@@ -240,10 +239,12 @@ class Connection(object):
 
     def stats(self):
         """Return a dict of beanstalkd statistics."""
+
         return self._interact_yaml('stats\r\n', ['OK'])
 
     def stats_tube(self, name):
         """Return a dict of stats about a given tube."""
+
         return self._interact_yaml('stats-tube %s\r\n' % name,
                                    ['OK'],
                                    ['NOT_FOUND'])
@@ -255,7 +256,6 @@ class Connection(object):
                        ['NOT_FOUND'])
 
     # -- job interactors --
-
     def delete(self, jid):
         """Delete a job, by job id."""
         self._interact('delete %d\r\n' % jid, ['DELETED'], ['NOT_FOUND'])
@@ -282,55 +282,3 @@ class Connection(object):
         return self._interact_yaml('stats-job %d\r\n' % jid,
                                    ['OK'],
                                    ['NOT_FOUND'])
-
-
-class Job(object):
-    def __init__(self, conn, jid, body, reserved=True):
-        self.conn = conn
-        self.jid = jid
-        self.body = body
-        self.reserved = reserved
-
-    def _priority(self):
-        stats = self.stats()
-        if isinstance(stats, dict):
-            return stats['pri']
-        return DEFAULT_PRIORITY
-
-    # -- public interface --
-
-    def delete(self):
-        """Delete this job."""
-        self.conn.delete(self.jid)
-        self.reserved = False
-
-    def release(self, priority=None, delay=0):
-        """Release this job back into the ready queue."""
-        if self.reserved:
-            self.conn.release(self.jid, priority or self._priority(), delay)
-            self.reserved = False
-
-    def bury(self, priority=None):
-        """Bury this job."""
-        if self.reserved:
-            self.conn.bury(self.jid, priority or self._priority())
-            self.reserved = False
-
-    def kick(self):
-        """Kick this job alive."""
-        self.conn.kick_job(self.jid)
-
-    def touch(self):
-        """Touch this reserved job, requesting more time to work on it before
-        it expires."""
-        if self.reserved:
-            self.conn.touch(self.jid)
-
-    def stats(self):
-        """Return a dict of stats about this job."""
-        return self.conn.stats_job(self.jid)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.main(argv=['nosetests', '-c', '.nose.cfg'])
