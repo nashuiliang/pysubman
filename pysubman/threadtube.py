@@ -2,6 +2,7 @@
 # coding=utf-8
 
 import Queue
+import signal
 import traceback
 import threading
 
@@ -11,6 +12,16 @@ from .producer import Producer
 from .job import Job
 from .constants import JobException, JOB_STATUS_ERROR
 from .connection import Connection
+
+_Thread_Exit = False
+
+
+def _thread_exit_handler(signum, frame):
+    global _Thread_Exit
+    _Thread_Exit = True
+    logger.info("receive a signal %d, is_exit = %d " % (signum, _Thread_Exit))
+
+signal.signal(signal.SIGINT, _thread_exit_handler)
 
 
 class ThreadTube(object):
@@ -40,20 +51,48 @@ class ThreadTube(object):
             logger.info("watch list sum %d in %s" % (
                 self.connection.ignore("default"), "default"))
 
-    def _set_work_pool(self, maxsize):
+    def _set_work_pool(self, thread_tubes, maxsize):
         for i in xrange(maxsize):
             t = _Worker(self.tube, self.client.address, self.t_queue, self.services)
             t.start()
+            thread_tubes.append(t)
 
     def run(self):
 
-        self._set_work_pool(4)
+        thread_tubes = []
+        self._set_work_pool(thread_tubes, 4)
 
         while True:
-            bjob = self.connection.reserve()
-            bjob.bury(self.connection)
+            if not _Thread_Exit:
+                bjob = self.connection.reserve()
+                bjob.bury(self.connection)
 
-            self.t_queue.put(bjob)
+                self.t_queue.put(bjob)
+            else:
+                break
+
+        #: exit
+        logger.info("get all bury job")
+        logger.info("get queue numbers")
+
+        self._wait_thread_completed(thread_tubes)
+        logger.info("all threading is stop")
+
+        logger.info("kick all buried jobs")
+        self._kick_all_bury_jobs()
+
+    def _kick_all_bury_jobs(self):
+        stats_tube = self.connection.stats_tube(self.tube)
+        buried_job_nums = stats_tube["current-jobs-buried"]
+        if not buried_job_nums:
+            buried_job_nums = 10
+        result = self.connection.kick()
+        logger.info(result)
+
+    def _wait_thread_completed(self, thread_tubes):
+        while True:
+            if not filter(lambda k: k.is_alive(), thread_tubes):
+                return
 
 
 class _Worker(threading.Thread):
@@ -75,9 +114,15 @@ class _Worker(threading.Thread):
 
     def run(self):
         while True:
-            bjob = self._queue.get()
-            job = Job(self._connection, bjob.jid, bjob.body, bjob.reserved)
-            self._run_job(job)
+            if not _Thread_Exit:
+                bjob = self._queue.get()
+                job = Job(self._connection, bjob.jid, bjob.body, bjob.reserved)
+                self._run_job(job)
+                self._queue.task_done()
+
+            else:
+                logger.info("receive a signal to exit, thread[%s] stop" % self.getName())
+                break
 
     def _run_job(self, job):
         try:

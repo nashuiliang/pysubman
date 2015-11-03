@@ -82,6 +82,12 @@ Customer
         main()
 
 
+TODO
+----
+
+- 添加 <C-c> 信号终止处理
+- 添加 tcp 链接超时处理
+
 Support
 -------
 
