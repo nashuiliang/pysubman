@@ -16,7 +16,7 @@ class Service(object):
         self._services = {}
 
     def add(self, topic, method):
-        redis_logger.info((topic, method))
+        redis_logger.debug("Topic %s is successfully added !" % topic)
         self._services[topic] = _Service(topic, method)
 
     def get_all_services(self):
