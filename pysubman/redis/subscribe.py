@@ -86,7 +86,7 @@ class Listener(threading.Thread):
                 continue
 
             #: running
-            self.service.method(message)
+            self.service.method(message[1], topic=message[0])
 
         count = self.get_topic_count()
         if count:

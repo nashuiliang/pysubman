@@ -41,7 +41,7 @@ def worker():
         i = i + 1
         result = client.publish("oauth:linkedin", message)
         logging.warn((now_time, result, i))
-        #time.sleep(random.randint(1, 3))
+        time.sleep(random.randint(1, 3))
 
 
 def main():
