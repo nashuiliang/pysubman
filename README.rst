@@ -14,7 +14,7 @@ Version update
 --------------
 
 
-- 1.20.1.0 添加 redis 消息队列
+- 1.20.1.0 添加 redis 消息队列, <C-c> 终止处理
 - 1.10.4 添加 Producer put 返回值
 - 1.10.4 添加 beanstalkd;修改 Customer Producer 接口
 - 1.10.2 去掉 logging
@@ -76,7 +76,6 @@ Customer
 TODO
 ----
 
-- 添加 <C-c> 信号终止处理
 - 添加 tcp 链接超时处理
 
 Support
