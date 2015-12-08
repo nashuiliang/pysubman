@@ -68,9 +68,6 @@ class Listener(threading.Thread):
         self.service = service
         self.alive = True
 
-    def get_redis_client(self):
-        return redis.StrictRedis(connection_pool=self.redis_pool)
-
     def get_topic_count(self):
         return self.client.get_redis_client().llen(self.service.topic)
 
