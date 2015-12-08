@@ -32,17 +32,26 @@ Producer
     #!/usr/bin/env python
     # coding=utf-8
 
-    import json
     import time
-    from pysubman.redis.client import Client
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    import pysubman
 
-    client = Client(host="127.0.0.1:6379:5")
-    message = json.dumps({
-        "type": "linkedin",
-        "time": time.time(),
-    })
-    client.publish("oauth:linkedin", message)
 
+    class EMAIL(object):
+        Tube = "t-101"
+        Topic = "EMAIL"
+        Info = [
+            ("TemplateUrl", "%s"),
+            ("Params", "%s"),
+        ]
+
+    client = pysubman.Producer(address="192.168.0.23:11300")
+
+    while True:
+        now_time = time.time()
+        client.put(EMAIL, "baidu.com", "chaungwang: {}".format(now_time))
+        time.sleep(10)
 
 
 Customer
@@ -53,20 +62,21 @@ Customer
     #!/usr/bin/env python
     # coding=utf-8
 
-    from pysubman.redis.client import Client
-    from pysubman.redis.service import Service
-    from pysubman.redis.subscribe import Subscriber
+    import logging
+    import pysubman
+    logging.basicConfig(level=logging.DEBUG)
 
-    services = Service()
+    service = pysubman.Service()
 
 
-    @services.C("oauth:linkedin")
+    @service.C(["EMAIL", "EMAIL.SEND_TEMPLATE"])
     def handler_email_job(body):
         logging.warn(("body", body))
 
 
     def main():
-        Subscriber(Client(host="127.0.0.1:6379:5")).subscribe(services)
+        consumer = pysubman.Consumer(address="192.168.0.23:11300").tube("t-101")
+        consumer.run(services)
 
 
     if __name__ == "__main__":
