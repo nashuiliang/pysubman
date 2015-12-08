@@ -14,6 +14,7 @@ Version update
 --------------
 
 
+- 1.20.1.1 添加 redis 消息默认前缀 `mq:`
 - 1.20.1.0 添加 redis 消息队列, <C-c> 终止处理
 - 1.10.4 添加 Producer put 返回值
 - 1.10.4 添加 beanstalkd;修改 Customer Producer 接口

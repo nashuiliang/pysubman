@@ -10,3 +10,7 @@ redis_logger = logging.getLogger("pysuman.redis")
 
 class ServiceException(Exception):
     pass
+
+
+def wrapper_topic(topic):
+    return "mq:" + topic

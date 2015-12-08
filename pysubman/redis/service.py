@@ -4,7 +4,7 @@
 import functools
 from collections import namedtuple
 
-from .util import redis_logger, ServiceException
+from .util import redis_logger, ServiceException, wrapper_topic
 
 
 _Service = namedtuple("_Service", ["topic", "method"])
@@ -28,6 +28,7 @@ class Service(object):
 
     def C(self, topic):
 
+        topic = wrapper_topic(topic)
         if not topic:
             raise ServiceException("topic not empty")
 
