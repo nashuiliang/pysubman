@@ -28,7 +28,7 @@ def get_version():
                          version_file.read()).group('version')
 
 install_requires = [
-    'beanstalkc',
+    'redis',
 ]
 
 # tests_require = ['mock', 'nose', 'unittest2', 'python-snappy']

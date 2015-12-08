@@ -3,25 +3,30 @@
 
 import redis
 
-from .publish import Publisher
+
+def create_redis_pool(source):
+    host, port, db = source.split(":")
+    port = int(port)
+    db = int(db)
+
+    return redis.ConnectionPool(host=host, port=port, db=db)
 
 
 class Client(object):
 
     def __init__(self, host):
-        self._create_redis_pool(host)
-
-    def _create_redis_pool(self, source):
-        host, port, db = source.split(":")
-        port = int(port)
-        db = int(db)
-
-        self.redis_pool = redis.ConnectionPool(
-            host=host, port=port, db=db)
+        self.host = host
+        self.redis_pool = create_redis_pool(host)
 
     def get_redis_client(self):
         return redis.StrictRedis(connection_pool=self.redis_pool)
 
     def publish(self, topic, message):
-        publisher = Publisher(self)
-        return publisher.publish(topic, message)
+        return self.get_redis_client().lpush(topic, message)
+
+    def publishv2(self, topic, message):
+        sub_count = self.get_redis_client().publish(topic, message)
+        if sub_count == 0:
+            self.get_redis_client().lpush(topic, message)
+            return 1
+        return sub_count
