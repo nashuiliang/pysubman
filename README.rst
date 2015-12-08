@@ -1,7 +1,7 @@
 Pysubman
 ========
 
-消息队列，基于 beanstalk
+消息队列，基于 redis 或者 beanstalk
 
 You can install pysubman from PyPI with
 
