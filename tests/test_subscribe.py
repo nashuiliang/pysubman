@@ -16,7 +16,7 @@ services = Service()
 
 @services.C("oauth:linkedin")
 def handler_linkedin_service(message, **kwargs):
-    logging.warn(("me", message))
+    raise KeyError(message)
 
 
 if __name__ == "__main__":

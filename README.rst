@@ -14,6 +14,7 @@ Version update
 --------------
 
 
+- 1.20.1.4 处理线程异常
 - 1.20.1.3 修改 redis rpop to brpop
 - 1.20.1.1 添加 redis 消息默认前缀 `mq:`
 - 1.20.1.0 添加 redis 消息队列, <C-c> 终止处理

@@ -6,6 +6,7 @@ import signal
 import sys
 import threading
 import time
+import traceback
 
 from .util import redis_logger
 from .service import Service
@@ -86,7 +87,10 @@ class Listener(threading.Thread):
                 continue
 
             #: running
-            self.service.method(message[1], topic=message[0])
+            try:
+                self.service.method(message[1], topic=message[0])
+            except:
+                traceback.print_exc()
 
         count = self.get_topic_count()
         if count:
